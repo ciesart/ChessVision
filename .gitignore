@@ -1,0 +1,14 @@
+# Ignoruj wszystko
+*
+
+# Nie ignoruj plików .py
+!*.py
+
+# Nie ignoruj pliku .gitignore (żeby sam się nie ignorował)
+!.gitignore
+
+# Nie ignoruj pliku README, jeśli chcesz go mieć
+!README.md
+
+# Opcjonalnie: nie ignoruj innych ważnych plików, jeśli je masz
+# np. !requirements.txt
