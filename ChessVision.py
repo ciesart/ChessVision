@@ -6,21 +6,17 @@ import math
 import pytesseract
 import os
 
-# Ustawienie zmiennej œrodowiskowej TESSDATA_PREFIX
 os.environ['TESSDATA_PREFIX'] = r'C:\Program Files\Tesseract-OCR\tessdata'
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Camera settings
 CAMERA_WIDTH = 1920
 CAMERA_HEIGHT = 1080
 DISPLAY_SCALE = 0.5
 
-# Initialize camera
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
 
-# Global variables
 running = True
 perspective_matrix = None
 warped_size = 0
@@ -38,7 +34,7 @@ distance_threshold = None
 color_threshold = None
 detected_fields = None
 current_frame = None
-board_labels = None  # Nowa zmienna dla oznaczeñ szachownicy
+board_labels = None
 is_assigned = False
 bottom_left_field = None
 
@@ -337,7 +333,7 @@ def detect_with_pattern_method():
     global current_frame, detected_lines, proposed_corners, detected_fields, board_labels, is_assigned, bottom_left_field
     if detected_lines is not None and detected_fields is not None:
         print("Starting Detect with Pattern...")
-        # Apply perspective transformation if needed
+ 
         frame_to_use = cv2.warpPerspective(current_frame, perspective_matrix, (warped_size, warped_size)) if perspective_matrix is not None else current_frame
         pattern_frame = frame_to_use.copy()
         print("Drawing fields...")
@@ -366,8 +362,7 @@ def detect_with_pattern_method():
             is_black = np.median(gray_region) < threshold_value
             
             board_labels = {"top": "", "bottom": "", "left": "", "right": ""}
-            
-            # Define character sets and sequences based on left bottom corner color
+
             if is_black:
                 top_bottom_chars = "ABCDEFGH"  # A-H for top and bottom
                 left_right_chars = "12345678"  # 1-8 for left and right
@@ -391,7 +386,6 @@ def detect_with_pattern_method():
                 left_right_seq_1_name = "A-H (ascending)"
                 left_right_seq_2_name = "H-A (descending)"
             
-            # Initialize scores for ascending and descending sequences in a dictionary
             scores = {
                 "top_bottom_ascending": 0.0,
                 "top_bottom_descending": 0.0,
@@ -411,7 +405,6 @@ def detect_with_pattern_method():
                 binary = cv2.dilate(binary, kernel, iterations=2)
                 cv2.imwrite(f"debug_{name}_{section_idx}_binary.png", binary)
                 
-                # Config with confidence threshold
                 config = f'--psm 10 --oem 1 -c tessedit_char_whitelist={allowed_chars} -c textord_min_confidence=0.3 -c textord_min_xheight=10'
                 best_text = ""
                 best_conf = -1
@@ -425,18 +418,18 @@ def detect_with_pattern_method():
                         M = cv2.getRotationMatrix2D((binary.shape[1]//2, binary.shape[0]//2), angle, 1)
                         rotated = cv2.warpAffine(binary, M, (binary.shape[1], binary.shape[0]))
                     
-                    # Use image_to_data to get confidence scores
+
                     data = pytesseract.image_to_data(rotated, config=config, output_type=pytesseract.Output.DICT)
                     for i in range(len(data['text'])):
                         text = data['text'][i].strip().upper()
-                        # Take only the first character if multiple are detected
+
                         if len(text) > 1:
                             text = text[0]
-                        # Filter to allowed characters
+
                         text = ''.join(c for c in text if c in allowed_chars)
                         conf = float(data['conf'][i])
                         if text and conf >= 0.3:
-                            # Check if the detected character matches the expected sequence
+
                             if text == expected_seq_1[section_idx]:
                                 matches.append((text, conf, angle, seq_1_name))
                                 if conf > best_conf:
@@ -452,16 +445,16 @@ def detect_with_pattern_method():
                                     best_angle = angle
                                     best_seq_name = seq_2_name
                 
-                # Log all matches that fit the expected sequences and update scores
+
                 for text, conf, angle, seq_name in matches:
                     print(f"Detected in {name} (section {section_idx}): '{text}' with confidence {conf:.2f} at angle {angle} deg, matched to sequence {seq_name}")
-                    # Update scores based on the sequence
+
                     if name in ["top", "bottom"]:
                         if seq_name.endswith("(ascending)"):
                             scores["top_bottom_ascending"] += conf
                         else:
                             scores["top_bottom_descending"] += conf
-                    else:  # left or right
+                    else: 
                         if seq_name.endswith("(ascending)"):
                             scores["left_right_ascending"] += conf
                         else:
@@ -469,14 +462,14 @@ def detect_with_pattern_method():
                 
                 return best_text
             
-            # Processing regions with restricted character sets
+
             top_region = frame_to_use[0:int(min_y), int(min_x):int(max_x)] if min_y > 0 else None
             bottom_region = frame_to_use[int(max_y):warped_size, int(min_x):int(max_x)] if max_y < warped_size else None
             left_region = frame_to_use[int(min_y):int(max_y), 0:int(min_x)] if min_x > 0 else None
             right_region = frame_to_use[int(min_y):int(max_y), int(max_x):warped_size] if max_x < warped_size else None
             
             if top_region is not None:
-                # Divide top region into 8 equal parts horizontally
+
                 region_width = top_region.shape[1]
                 section_width = region_width // 8
                 top_sections = []
@@ -489,7 +482,7 @@ def detect_with_pattern_method():
                 board_labels["top"] = "".join(top_sections)
             
             if bottom_region is not None:
-                # Divide bottom region into 8 equal parts horizontally
+
                 region_width = bottom_region.shape[1]
                 section_width = region_width // 8
                 bottom_sections = []
@@ -502,7 +495,7 @@ def detect_with_pattern_method():
                 board_labels["bottom"] = "".join(bottom_sections)
             
             if left_region is not None:
-                # Divide left region into 8 equal parts vertically
+
                 region_height = left_region.shape[0]
                 section_height = region_height // 8
                 left_sections = []
@@ -510,13 +503,13 @@ def detect_with_pattern_method():
                     y_start = i * section_height
                     y_end = (i + 1) * section_height if i < 7 else region_height
                     section = left_region[y_start:y_end, :]
-                    section_idx = 7 - i  # Reverse order for left side
+                    section_idx = 7 - i
                     char = recognize_char(section, "left", section_idx, left_right_chars, left_right_seq_1, left_right_seq_2, left_right_seq_1_name, left_right_seq_2_name, scores)
                     left_sections.append(char)
                 board_labels["left"] = "".join(left_sections)
             
             if right_region is not None:
-                # Divide right region into 8 equal parts vertically
+
                 region_height = right_region.shape[0]
                 section_height = region_height // 8
                 right_sections = []
@@ -524,20 +517,17 @@ def detect_with_pattern_method():
                     y_start = i * section_height
                     y_end = (i + 1) * section_height if i < 7 else region_height
                     section = right_region[y_start:y_end, :]
-                    section_idx = 7 - i  # Reverse order for right side
+                    section_idx = 7 - i
                     char = recognize_char(section, "right", section_idx, left_right_chars, left_right_seq_1, left_right_seq_2, left_right_seq_1_name, left_right_seq_2_name, scores)
                     right_sections.append(char)
                 board_labels["right"] = "".join(right_sections)
-            
-            # Determine the orientation of each group based on scores
+
             top_bottom_orientation = "ascending" if scores["top_bottom_ascending"] >= scores["top_bottom_descending"] else "descending"
             left_right_orientation = "ascending" if scores["left_right_ascending"] >= scores["left_right_descending"] else "descending"
-            
-            # Print the scores and orientations
+
             print(f"Top/Bottom scores: ascending={scores['top_bottom_ascending']:.2f}, descending={scores['top_bottom_descending']:.2f}, orientation={top_bottom_orientation}")
             print(f"Left/Right scores: ascending={scores['left_right_ascending']:.2f}, descending={scores['left_right_descending']:.2f}, orientation={left_right_orientation}")
-            
-            # Determine verdict
+
             if is_black:
                 if top_bottom_orientation == "ascending" and left_right_orientation == "ascending":
                     verdict = "A1"
@@ -553,11 +543,9 @@ def detect_with_pattern_method():
                 else:
                     verdict = "unknown"
             
-            # Set global variables for decision and field
             is_assigned = (verdict != "unknown")
             bottom_left_field = verdict if is_assigned else None
-            
-            # Update the text field next to "Confirm Chessboard" button
+
             if is_assigned:
                 instruction_label.config(text=f"Found chessboard and assigned fields: {verdict}")
             else:
@@ -583,7 +571,6 @@ def confirm_chessboard_pattern():
         instruction_label.config(text="No proposed chessboard to confirm.")
         return
     
-    # If fields were not assigned, default to A1 orientation
     if not is_assigned or bottom_left_field is None:
         instruction_label.config(text="Fields not assigned, defaulting to A1 orientation.")
         bottom_left_field = "A1"
@@ -612,7 +599,6 @@ def update_fen():
     fen_text.delete(1.0, tk.END)
     fen_text.insert(tk.END, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
-# Set up GUI window
 root = tk.Tk()
 root.title("ChessVision Control")
 root.geometry("600x600")
@@ -759,46 +745,46 @@ while running:
             step_x = (max_x - min_x) / 8
             step_y = (max_y - min_y) / 8
             
-            # Determine field labels based on bottom_left_field
+
             if bottom_left_field == "A1":
-                # Standard orientation: A1 at (min_x, max_y)
+
                 for i in range(8):
                     for j in range(8):
-                        col_letter = chr(ord('A') + i)  # A to H (min_x to max_x)
-                        row_number = str(8 - j)  # 1 to 8 (max_y to min_y)
+                        col_letter = chr(ord('A') + i)
+                        row_number = str(8 - j)
                         label = f"{col_letter}{row_number}"
                         x = int(min_x + i * step_x + step_x / 2)
                         y = int(min_y + j * step_y + step_y / 2)
                         cv2.putText(warped_frame, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
             
             elif bottom_left_field == "H8":
-                # Reversed orientation: H8 at (min_x, max_y)
+
                 for i in range(8):
                     for j in range(8):
-                        col_letter = chr(ord('H') - i)  # H to A (min_x to max_x)
-                        row_number = str(j + 1)  # 8 to 1 (max_y to min_y)
+                        col_letter = chr(ord('H') - i)
+                        row_number = str(j + 1)
                         label = f"{col_letter}{row_number}"
                         x = int(min_x + i * step_x + step_x / 2)
                         y = int(min_y + j * step_y + step_y / 2)
                         cv2.putText(warped_frame, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
             
             elif bottom_left_field == "H1":
-                # Rotated 90 degrees clockwise: H1 at (min_x, max_y)
+
                 for i in range(8):
                     for j in range(8):
-                        col_letter = chr(ord('A') + j)  # A to H (max_y to min_y)
-                        row_number = str(i + 1)  # 1 to 8 (min_x to max_x)
+                        col_letter = chr(ord('A') + j)
+                        row_number = str(i + 1)
                         label = f"{col_letter}{row_number}"
                         x = int(min_x + i * step_x + step_x / 2)
                         y = int(min_y + j * step_y + step_y / 2)
                         cv2.putText(warped_frame, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
             
             elif bottom_left_field == "A8":
-                # Rotated 90 degrees counterclockwise: A8 at (min_x, max_y)
+
                 for i in range(8):
                     for j in range(8):
-                        col_letter = chr(ord('H') - j)  # H to A (max_y to min_y)
-                        row_number = str(8 - i)  # 8 to 1 (min_x to max_x)
+                        col_letter = chr(ord('H') - j)
+                        row_number = str(8 - i)
                         label = f"{col_letter}{row_number}"
                         x = int(min_x + i * step_x + step_x / 2)
                         y = int(min_y + j * step_y + step_y / 2)
